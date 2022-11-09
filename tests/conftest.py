@@ -4,8 +4,10 @@ from utils.constants import MAX_INT, WEEK, ROLES
 
 # this should be the address of the ERC-20 used by the strategy/vault
 ASSET_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
-CASSET_ADDRESS = "0xc3d688B66703497DAA19211EEdff47f25384cdc3"  # cUSDCv3
+CASSET_ADDRESS = "0x39AA39c021dfbaE8faC545936693aC917d5E7563"  # cUSDC
+COMP_ADDRESS = "0xc00e94Cb662C3520282E6f5717214004A7f26888"  # COMP
 ASSET_WHALE_ADDRESS = "0x0A59649758aa4d66E25f08Dd01271e891fe52199"  # USDC WHALE
+COMP_WHALE_ADDRESS = "0x5608169973d639649196a84ee4085a708bcbf397"  # COMP whale
 
 
 @pytest.fixture(scope="session")
@@ -30,6 +32,16 @@ def asset():
 
 
 @pytest.fixture(scope="session")
+def comp():
+    yield Contract(COMP_ADDRESS)
+
+
+@pytest.fixture(scope="session")
+def comp_whale():
+    yield accounts[COMP_WHALE_ADDRESS]
+
+
+@pytest.fixture(scope="session")
 def amount(asset):
     # Use 1M
     return 1_000_000 * 10 ** asset.decimals()
@@ -38,7 +50,7 @@ def amount(asset):
 @pytest.fixture(scope="session")
 def ctoken():
     # NOTE: adding default contract type because it's not verified
-    return Contract(CASSET_ADDRESS, project.Comet.contract_type)
+    return Contract(CASSET_ADDRESS, project.CErc20I.contract_type)
 
 
 @pytest.fixture(scope="session")
@@ -47,6 +59,7 @@ def create_vault(project, gov):
         asset,
         governance=gov,
         deposit_limit=MAX_INT,
+        max_profit_locking_time=WEEK,
     ):
         vault = gov.deploy(
             project.dependencies["yearn-vaults"]["master"].VaultV3,
@@ -54,6 +67,7 @@ def create_vault(project, gov):
             "VaultV3",
             "AV",
             governance,
+            max_profit_locking_time,
         )
         # set vault deposit
         vault.set_deposit_limit(deposit_limit, sender=gov)

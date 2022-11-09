@@ -1,6 +1,6 @@
 from ape import reverts
 import pytest
-from utils.constants import REL_ERROR, MAX_INT, YEAR
+from utils.constants import REL_ERROR, MAX_INT, BLOCKS_PER_YEAR
 
 
 def test_strategy_constructor(asset, vault, strategy):
@@ -91,7 +91,7 @@ def test_total_assets(
     assert pytest.approx(new_debt, REL_ERROR) == strategy.totalAssets()
     assert asset.balanceOf(vault) == amount - new_debt
     assert asset.balanceOf(strategy) == 0
-    assert pytest.approx(new_debt, REL_ERROR) == ctoken.balanceOf(strategy)
+    assert pytest.approx(new_debt, REL_ERROR) == strategy.balanceOfCToken()
 
 
 def test_balance_of(create_vault_and_strategy, gov, amount, provide_strategy_with_debt):
@@ -132,7 +132,7 @@ def test_deposit(
     assert asset.balanceOf(vault) == amount // 2
     # get's reinvested directly
     assert asset.balanceOf(strategy) == 0
-    assert pytest.approx(new_debt, REL_ERROR) == ctoken.balanceOf(strategy)
+    assert pytest.approx(new_debt, REL_ERROR) == strategy.balanceOf(vault)
 
 
 def test_max_withdraw(
@@ -209,14 +209,14 @@ def test_withdraw(
 
     assert asset.balanceOf(strategy) == 0
     assert asset.balanceOf(vault) == amount // 2
-    assert pytest.approx(new_debt, REL_ERROR) == ctoken.balanceOf(strategy)
+    assert pytest.approx(new_debt, REL_ERROR) == strategy.balanceOfCToken()
 
     strategy.withdraw(strategy.maxWithdraw(vault), vault, vault, sender=vault)
 
-    assert pytest.approx(0, abs=1e3) == strategy.balanceOf(vault)
+    assert pytest.approx(0, abs=1e4) == strategy.balanceOf(vault)
     assert asset.balanceOf(strategy) == 0
     assert pytest.approx(amount, REL_ERROR) == asset.balanceOf(vault)
-    assert pytest.approx(0, abs=1e3) == ctoken.balanceOf(strategy)
+    assert pytest.approx(0, abs=1e4) == strategy.balanceOfCToken()
 
 
 def test_withdraw_low_liquidity(
@@ -234,23 +234,26 @@ def test_withdraw_low_liquidity(
 
     assert asset.balanceOf(strategy) == 0
     assert asset.balanceOf(vault) == 0
-    assert pytest.approx(new_debt, REL_ERROR) == ctoken.balanceOf(strategy)
+    assert pytest.approx(new_debt, REL_ERROR) == strategy.balanceOfCToken()
 
     # let's drain ctoken contract
-    asset.transfer(
+    tx_drain = asset.transfer(
         user, asset.balanceOf(ctoken) - 10 ** vault.decimals(), sender=ctoken
     )
+    # cToken exchangeRateStored has changed without cash(asset):
+    # exchangeRate = (getCash() + totalBorrows() - totalReserves()) / totalSupply()
+    assert new_debt - 10 ** vault.decimals() > strategy.balanceOfCToken()
 
-    strategy.withdraw(strategy.maxWithdraw(vault), vault, vault, sender=vault)
+    max_withdraw = strategy.maxWithdraw(vault)
+    assert max_withdraw == 10 ** vault.decimals()
+    tx = strategy.withdraw(max_withdraw, vault, vault, sender=vault)
 
-    assert pytest.approx(
-        new_debt - 10 ** vault.decimals(), rel=1e-5
-    ) == strategy.balanceOf(vault)
+    # all is in cToken because underlying asset is drained
+    assert strategy.balanceOf(vault) == strategy.balanceOfCToken()
     assert asset.balanceOf(strategy) == 0
     assert pytest.approx(10 ** vault.decimals(), REL_ERROR) == asset.balanceOf(vault)
-    assert pytest.approx(
-        new_debt - 10 ** vault.decimals(), rel=1e-5
-    ) == ctoken.balanceOf(strategy)
+    # cToken is worth less because of drained cash
+    assert new_debt - max_withdraw > strategy.balanceOfCToken()
 
 
 def test_apr(
@@ -266,8 +269,7 @@ def test_apr(
     new_debt = amount
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
-    current_utilization = ctoken.getUtilization()
-    current_real_apr = ctoken.getSupplyRate(current_utilization) * YEAR
+    current_real_apr = ctoken.supplyRatePerBlock() * BLOCKS_PER_YEAR
     current_expected_apr = strategy.aprAfterDebtChange(0)
     assert pytest.approx(current_real_apr, rel=1e-5) == current_expected_apr
 
@@ -275,9 +277,9 @@ def test_apr(
     assert current_real_apr < strategy.aprAfterDebtChange(-int(1e12))
     assert current_real_apr > strategy.aprAfterDebtChange(int(1e12))
 
-    # Supply is not curretly incentivized
+    # Supply is not currently incentivized
     assert strategy.getRewardAprForSupplyBase(0) == 0
-    assert strategy.getRewardsOwed() == 0
+    assert strategy.getRewardsPending() == 0
 
 
 def test_harvest(
@@ -299,5 +301,42 @@ def test_harvest(
     # harvest function should still work and not revert without any rewards
     strategy.harvest(sender=strategist)
 
+    stored_balance = strategy.balanceOfCToken()
+    # this will trigger to recalculating the exchange rate used for cToken
+    calculated_balance = ctoken.balanceOfUnderlying(
+        strategy, sender=strategist
+    ).return_value
+    assert calculated_balance > stored_balance
+
     # no rewards should be claimed but the call accrues the account so we should be slightly higher
     assert strategy.totalAssets() > before_bal
+
+
+def test_reward(
+    asset,
+    ctoken,
+    user,
+    create_vault_and_strategy,
+    gov,
+    strategist,
+    amount,
+    provide_strategy_with_debt,
+    comp,
+    comp_whale,
+):
+    vault, strategy = create_vault_and_strategy(gov, amount)
+    new_debt = amount
+    provide_strategy_with_debt(gov, strategy, vault, new_debt)
+
+    before_bal = strategy.totalAssets()
+
+    reward = 2 * 10 ** comp.decimals()
+    comp.transfer(strategy, reward, sender=comp_whale)
+    assert comp.balanceOf(strategy) == reward
+
+    # harvest function should still work and will swap rewards any rewards
+    strategy.harvest(sender=strategist)
+
+    # rewards should be claimed but the call doesn't accrues the cToken value
+    assert strategy.totalAssets() > before_bal
+    assert comp.balanceOf(strategy) == 0
