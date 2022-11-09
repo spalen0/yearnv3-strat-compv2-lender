@@ -66,8 +66,6 @@ contract Strategy is BaseStrategy, Ownable {
             _amountFreed = _amount;
         } else {
             // NOTE: we need the balance updated
-            // TODO: check if the need something here
-            // cToken.accrueAccount(address(this));
             // We need to take from Compound enough to reach _amount
             // We run with 'unchecked' as we are safe from underflow
             unchecked {
@@ -108,19 +106,7 @@ contract Strategy is BaseStrategy, Ownable {
     }
 
     function _depositToCompound(uint256 _amount) internal {
-        // _checkAllowance(address(_cToken), asset, _amount);
         require(cToken.mint(_amount) == 0, "cToken: mint fail");
-    }
-
-    function _checkAllowance(
-        address _contract,
-        address _token,
-        uint256 _amount
-    ) internal {
-        if (IERC20(_token).allowance(address(this), _contract) < _amount) {
-            IERC20(_token).approve(_contract, 0);
-            IERC20(_token).approve(_contract, _amount);
-        }
     }
 
     function balanceOfCToken() public view returns (uint256) {
