@@ -67,13 +67,8 @@ def test_reward_yswap(
     )
 
     # Trigger ySwap
-    # trade_factory.execute(
-    #     AsyncTradeExecutionDetails calldata _tradeExecutionDetails,
-    #     address _swapper,
-    #     bytes calldata _data
-    # ) external returns (uint256 _receivedAmount);
-    tx_swap = trade_factory.execute["tuple,address,bytes"](
-        asyncTradeExecutionDetails,
+    tx_swap = trade_factory.execute(
+        [asyncTradeExecutionDetails],
         "0x408Ec47533aEF482DC8fA568c36EC0De00593f44",
         path_in_bytes,
         sender=ymechs_safe,
