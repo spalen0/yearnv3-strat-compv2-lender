@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20, BaseStrategy} from "BaseStrategy.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IUniswapV2Router01.sol";
+import "./interfaces/ITradeFactory.sol";
 import "./interfaces/comp/CErc20I.sol";
 import "./interfaces/comp/InterestRateModel.sol";
 import "./interfaces/comp/ComptrollerI.sol";
@@ -32,6 +33,7 @@ contract Strategy is BaseStrategy, Ownable {
     uint256 public minCompToSell = 1 ether;
     uint256 public minCompToClaim = 1 ether;
     uint256 public dustThreshold = 1;
+    address public tradeFactory;
 
     CErc20I public immutable cToken;
 
@@ -188,7 +190,9 @@ contract Strategy is BaseStrategy, Ownable {
     function harvest() external onlyOwner {
         _claimRewards();
 
-        _disposeOfComp();
+        if (tradeFactory == address(0)) {
+            _disposeOfComp();
+        }
 
         _invest();
     }
@@ -254,5 +258,29 @@ contract Strategy is BaseStrategy, Ownable {
      */
     function setDustThreshold(uint256 _dustThreshold) external onlyOwner {
         dustThreshold = _dustThreshold;
+    }
+
+    // ---------------------- YSWAPS FUNCTIONS ----------------------
+    function setTradeFactory(address _tradeFactory) external onlyOwner {
+        if (tradeFactory != address(0)) {
+            _removeTradeFactoryPermissions();
+        }
+
+        ITradeFactory tf = ITradeFactory(_tradeFactory);
+
+        IERC20(COMP).safeApprove(_tradeFactory, type(uint256).max);
+        tf.enable(COMP, IVault(vault).asset());
+
+        tradeFactory = _tradeFactory;
+    }
+
+    function removeTradeFactoryPermissions() external onlyOwner {
+        _removeTradeFactoryPermissions();
+    }
+
+    function _removeTradeFactoryPermissions() internal {
+        IERC20(COMP).safeApprove(tradeFactory, 0);
+
+        tradeFactory = address(0);
     }
 }

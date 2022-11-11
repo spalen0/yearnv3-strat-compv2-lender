@@ -54,6 +54,16 @@ def ctoken():
 
 
 @pytest.fixture(scope="session")
+def trade_factory():
+    yield Contract("0x7BAF843e06095f68F4990Ca50161C2C4E4e01ec6")
+
+
+@pytest.fixture(scope="session")
+def ymechs_safe():
+    yield Contract("0x2C01B4AD51a67E2d8F02208F54dF9aC4c0B778B6")
+
+
+@pytest.fixture(scope="session")
 def create_vault(project, gov):
     def create_vault(
         asset,
