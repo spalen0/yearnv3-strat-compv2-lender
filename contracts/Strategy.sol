@@ -213,7 +213,7 @@ contract Strategy is BaseStrategy, Ownable {
             cTokens[0] = cToken;
             address[] memory holders = new address[](1);
             holders[0] = address(this);
-            COMPTROLLER.claimComp(holders, cTokens, true, false);
+            COMPTROLLER.claimComp(holders, cTokens, false, true);
         }
     }
 

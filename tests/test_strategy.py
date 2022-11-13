@@ -132,7 +132,7 @@ def test_deposit(
     assert asset.balanceOf(vault) == amount // 2
     # get's reinvested directly
     assert asset.balanceOf(strategy) == 0
-    assert pytest.approx(new_debt, REL_ERROR) == strategy.balanceOf(vault)
+    assert pytest.approx(new_debt, REL_ERROR) == strategy.balanceOfCToken()
 
 
 def test_max_withdraw(
