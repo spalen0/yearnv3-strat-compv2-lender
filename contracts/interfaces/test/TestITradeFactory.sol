@@ -9,7 +9,9 @@ interface TestITradeFactory {
         uint256 _amount;
         uint256 _minAmountOut;
     }
+
     function enable(address _tokenIn, address _tokenOut) external;
+
     function execute(
         AsyncTradeExecutionDetails calldata _tradeExecutionDetails,
         address _swapper,
