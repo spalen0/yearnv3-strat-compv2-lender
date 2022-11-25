@@ -1,6 +1,6 @@
 from ape import reverts
 import pytest
-from utils.constants import REL_ERROR, MAX_INT, BLOCKS_PER_YEAR, ZERO_ADDRESS
+from utils.constants import ZERO_ADDRESS
 
 
 def test_reward_yswap(

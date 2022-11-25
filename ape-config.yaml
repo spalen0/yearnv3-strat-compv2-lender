@@ -29,7 +29,6 @@ ethereum:
     default_provider: hardhat
 
 hardhat:
-  gas_limit: max
   fork:
     ethereum:
       mainnet:
