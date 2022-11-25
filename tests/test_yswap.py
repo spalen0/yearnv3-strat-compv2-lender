@@ -53,7 +53,7 @@ def test_reward_yswap(
         1,
     ]
 
-    # TODO: encode path
+    # encode path
     # path = [token_in.address, weth.address, token_out.address]
     # Code in Solidity used to generate path_in_bytes:
     # address[] memory path = new address[](3);
@@ -68,7 +68,7 @@ def test_reward_yswap(
 
     # Trigger ySwap
     tx_swap = trade_factory.execute(
-        [asyncTradeExecutionDetails],
+        asyncTradeExecutionDetails,
         "0x408Ec47533aEF482DC8fA568c36EC0De00593f44",
         path_in_bytes,
         sender=ymechs_safe,
