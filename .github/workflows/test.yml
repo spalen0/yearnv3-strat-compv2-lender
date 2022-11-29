@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v3
         with:
-          node-version: '14.x'
+          node-version: '18.x'
 
       - uses: ApeWorX/github-action@v1
         with:
