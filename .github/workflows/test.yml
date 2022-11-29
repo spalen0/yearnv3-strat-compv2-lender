@@ -12,7 +12,7 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: '18.x'
@@ -26,7 +26,7 @@ jobs:
         run: pip install git+https://github.com/vyperlang/vyper@v0.3.7
 
       - name: Compile contracts
-        run: ape compile --force --size
+        run: ape compile --size
 
       - name: Install hardhat
         run: npm install hardhat
