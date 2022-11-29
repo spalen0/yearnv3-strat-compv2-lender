@@ -26,6 +26,9 @@ jobs:
 
       - name: Install Vyper
         run: pip install git+https://github.com/vyperlang/vyper@v0.3.7
+        
+      - name: Check ssh
+        run: ssh -vT git@github.com
 
       - name: Compile contracts
         run: ape compile --force --size
