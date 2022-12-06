@@ -270,16 +270,22 @@ def test_apr(
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
     current_real_apr = ctoken.supplyRatePerBlock() * BLOCKS_PER_YEAR
-    current_expected_apr = strategy.aprAfterDebtChange(0)
-    assert pytest.approx(current_real_apr, rel=1e-5) == current_expected_apr
+    current_expected_apr_without_rewards = strategy.aprAfterDebtChange(
+        0
+    ) - strategy.getRewardAprForSupplyBase(0)
+    assert (
+        pytest.approx(current_real_apr, rel=1e-5)
+        == current_expected_apr_without_rewards
+    )
 
     # TODO: is there a way to re calculate without replicating in python?
-    assert current_real_apr < strategy.aprAfterDebtChange(-int(1e12))
-    assert current_real_apr > strategy.aprAfterDebtChange(int(1e12))
-
-    # Supply is not currently incentivized
-    assert strategy.getRewardAprForSupplyBase(0) == 0
-    assert strategy.getRewardsPending() == 0
+    assert current_real_apr < strategy.aprAfterDebtChange(
+        -int(1e12)
+    ) - strategy.getRewardAprForSupplyBase(-int(1e12))
+    assert current_real_apr > strategy.aprAfterDebtChange(
+        int(1e12)
+    ) - strategy.getRewardAprForSupplyBase(int(1e12))
+    assert strategy.getRewardAprForSupplyBase(0) > 0
 
 
 def test_harvest(
@@ -310,33 +316,3 @@ def test_harvest(
 
     # no rewards should be claimed but the call accrues the account so we should be slightly higher
     assert strategy.totalAssets() > before_bal
-
-
-def test_reward(
-    asset,
-    ctoken,
-    user,
-    create_vault_and_strategy,
-    gov,
-    strategist,
-    amount,
-    provide_strategy_with_debt,
-    comp,
-    comp_whale,
-):
-    vault, strategy = create_vault_and_strategy(gov, amount)
-    new_debt = amount
-    provide_strategy_with_debt(gov, strategy, vault, new_debt)
-
-    before_bal = strategy.totalAssets()
-
-    reward = 2 * 10 ** comp.decimals()
-    comp.transfer(strategy, reward, sender=comp_whale)
-    assert comp.balanceOf(strategy) == reward
-
-    # harvest function should still work and will swap rewards any rewards
-    strategy.harvest(sender=strategist)
-
-    # rewards should be claimed but the call doesn't accrues the cToken value
-    assert strategy.totalAssets() > before_bal
-    assert comp.balanceOf(strategy) == 0

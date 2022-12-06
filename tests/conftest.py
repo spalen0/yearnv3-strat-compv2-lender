@@ -42,6 +42,11 @@ def comp_whale():
 
 
 @pytest.fixture(scope="session")
+def asset_whale():
+    yield accounts[ASSET_WHALE_ADDRESS]
+
+
+@pytest.fixture(scope="session")
 def amount(asset):
     # Use 1M
     return 1_000_000 * 10 ** asset.decimals()
