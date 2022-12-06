@@ -25,7 +25,7 @@ def test_rewards_selling(
     comp.transfer(strategy, reward, sender=comp_whale)
     assert comp.balanceOf(strategy) == reward
 
-    #Set uni fees
+    # Set uni fees
     strategy.setUniFees(3000, 500, sender=strategist)
 
     # harvest function should still work and will swap rewards any rewards
@@ -40,10 +40,12 @@ def test_rewards_apr(strategy, asset):
     # get apr in percentage (100 / 1e18)
     apr = strategy.getRewardAprForSupplyBase(0) / 1e16
     # for current apr visit compound website: https://v2-app.compound.finance/
-    assert apr < 1 # all rewards are less than 1%
-    assert apr > 0.1 # all rewards are higher than 0.1%
+    assert apr < 1  # all rewards are less than 1%
+    assert apr > 0.1  # all rewards are higher than 0.1%
     # supplying more capital should reward in smaller rewards
-    assert strategy.getRewardAprForSupplyBase(0) > strategy.getRewardAprForSupplyBase(1000 * 10 ** asset.decimals())
+    assert strategy.getRewardAprForSupplyBase(0) > strategy.getRewardAprForSupplyBase(
+        1000 * 10 ** asset.decimals()
+    )
 
 
 def test_rewards_pending(
@@ -67,8 +69,8 @@ def test_rewards_pending(
 
     strategy.harvest(sender=strategist)
 
-    # chain.pending_timestamp += 10 * 24 * 3600
-    chain.mine(3600*24*10)
+    # Take some time for rewards to accrue
+    chain.mine(3600 * 24 * 10)
 
     # Somebody deposits to trigger to rewards calculation
     asset.approve(vault.address, amount, sender=asset_whale)

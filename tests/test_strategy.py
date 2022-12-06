@@ -270,12 +270,21 @@ def test_apr(
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
     current_real_apr = ctoken.supplyRatePerBlock() * BLOCKS_PER_YEAR
-    current_expected_apr_without_rewards = strategy.aprAfterDebtChange(0) - strategy.getRewardAprForSupplyBase(0)
-    assert pytest.approx(current_real_apr, rel=1e-5) == current_expected_apr_without_rewards
+    current_expected_apr_without_rewards = strategy.aprAfterDebtChange(
+        0
+    ) - strategy.getRewardAprForSupplyBase(0)
+    assert (
+        pytest.approx(current_real_apr, rel=1e-5)
+        == current_expected_apr_without_rewards
+    )
 
     # TODO: is there a way to re calculate without replicating in python?
-    assert current_real_apr < strategy.aprAfterDebtChange(-int(1e12)) - strategy.getRewardAprForSupplyBase(-int(1e12))
-    assert current_real_apr > strategy.aprAfterDebtChange(int(1e12)) - strategy.getRewardAprForSupplyBase(int(1e12))
+    assert current_real_apr < strategy.aprAfterDebtChange(
+        -int(1e12)
+    ) - strategy.getRewardAprForSupplyBase(-int(1e12))
+    assert current_real_apr > strategy.aprAfterDebtChange(
+        int(1e12)
+    ) - strategy.getRewardAprForSupplyBase(int(1e12))
     assert strategy.getRewardAprForSupplyBase(0) > 0
 
 
