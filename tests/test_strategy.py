@@ -264,16 +264,15 @@ def test_apr(
     gov,
     amount,
     provide_strategy_with_debt,
-    project,
     comp,
+    comptroller,
+    price_feed,
 ):
     vault, strategy = create_vault_and_strategy(gov, amount)
     new_debt = amount
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
     asset_decimals = vault.decimals()
-    price_feed = project.UniswapAnchoredViewI.at(strategy.PRICE_FEED())
-    comptroller = project.ComptrollerI.at(strategy.COMPTROLLER())
     comp_speed = comptroller.compSupplySpeeds(strategy.cToken()) * BLOCKS_PER_YEAR
     comp_price = price_feed.price("COMP")
     asset_price = price_feed.getUnderlyingPrice(strategy.cToken()) / 10 ** (30 - asset_decimals)
