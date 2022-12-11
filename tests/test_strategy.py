@@ -264,28 +264,36 @@ def test_apr(
     gov,
     amount,
     provide_strategy_with_debt,
+    project,
+    comp,
 ):
     vault, strategy = create_vault_and_strategy(gov, amount)
     new_debt = amount
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
+    asset_decimals = vault.decimals()
+    price_feed = project.UniswapAnchoredViewI.at(strategy.PRICE_FEED())
+    comptroller = project.ComptrollerI.at(strategy.COMPTROLLER())
+    comp_speed = comptroller.compSupplySpeeds(strategy.cToken()) * BLOCKS_PER_YEAR
+    comp_price = price_feed.price("COMP")
+    asset_price = price_feed.getUnderlyingPrice(strategy.cToken()) / 10 ** (30 - asset_decimals)
+    ctoken_total_supply_in_want = ctoken.totalSupply() * ctoken.exchangeRateStored() / 1e18
+    rewards_apr = comp_speed * comp_price * 10 ** asset_decimals / (ctoken_total_supply_in_want * asset_price)
+
     current_real_apr = ctoken.supplyRatePerBlock() * BLOCKS_PER_YEAR
-    current_expected_apr_without_rewards = strategy.aprAfterDebtChange(
-        0
-    ) - strategy.getRewardAprForSupplyBase(0)
+    current_expected_apr_with_rewards = strategy.aprAfterDebtChange(0)
     assert (
-        pytest.approx(current_real_apr, rel=1e-5)
-        == current_expected_apr_without_rewards
+        pytest.approx(current_real_apr + rewards_apr, rel=1e-5)
+        == current_expected_apr_with_rewards
+    )
+    assert (
+        pytest.approx(rewards_apr, rel=1e-5)
+        == strategy.getRewardAprForSupplyBase(0)
     )
 
     # TODO: is there a way to re calculate without replicating in python?
-    assert current_real_apr < strategy.aprAfterDebtChange(
-        -int(1e12)
-    ) - strategy.getRewardAprForSupplyBase(-int(1e12))
-    assert current_real_apr > strategy.aprAfterDebtChange(
-        int(1e12)
-    ) - strategy.getRewardAprForSupplyBase(int(1e12))
-    assert strategy.getRewardAprForSupplyBase(0) > 0
+    assert current_real_apr + rewards_apr < strategy.aprAfterDebtChange(-int(1e12))
+    assert current_real_apr + rewards_apr > strategy.aprAfterDebtChange(int(1e12))
 
 
 def test_harvest(
