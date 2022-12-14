@@ -8,6 +8,8 @@ CASSET_ADDRESS = "0x39AA39c021dfbaE8faC545936693aC917d5E7563"  # cUSDC
 COMP_ADDRESS = "0xc00e94Cb662C3520282E6f5717214004A7f26888"  # COMP
 ASSET_WHALE_ADDRESS = "0x0A59649758aa4d66E25f08Dd01271e891fe52199"  # USDC WHALE
 COMP_WHALE_ADDRESS = "0x5608169973d639649196a84ee4085a708bcbf397"  # COMP whale
+COMPTROLLER_ADDRESS = "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B"
+PRICE_FEED_ADDRESS = "0x65c816077C29b557BEE980ae3cC2dCE80204A0C5"
 
 
 @pytest.fixture(scope="session")
@@ -66,6 +68,16 @@ def trade_factory(project):
 @pytest.fixture(scope="session")
 def ymechs_safe():
     yield Contract("0x2C01B4AD51a67E2d8F02208F54dF9aC4c0B778B6")
+
+
+@pytest.fixture(scope="session")
+def comptroller(project):
+    yield project.ComptrollerI.at(COMPTROLLER_ADDRESS)
+
+
+@pytest.fixture(scope="session")
+def price_feed(project):
+    yield project.UniswapAnchoredViewI.at(PRICE_FEED_ADDRESS)
 
 
 @pytest.fixture(scope="session")
