@@ -64,7 +64,7 @@ contract Strategy is BaseStrategy, Ownable {
     {
         // TODO: may not be accurate due to unaccrued balance in cToken
         if (owner == vault) {
-            // return total value we have despite if liquid so the vault doesnt assess incorrect unrealized losses
+            // return total value we have even if illiquid so the vault doesnt assess incorrect unrealized losses
             return _totalAssets();
         } else {
             return 0;
