@@ -56,12 +56,9 @@ contract Strategy is BaseStrategy, Ownable {
         IERC20(COMP).safeApprove(address(UNISWAP_ROUTER), type(uint256).max);
     }
 
-    function _maxWithdraw(address owner)
-        internal
-        view
-        override
-        returns (uint256)
-    {
+    function _maxWithdraw(
+        address owner
+    ) internal view override returns (uint256) {
         // TODO: may not be accurate due to unaccrued balance in cToken
         if (owner == vault) {
             // return total value we have even if illiquid so the vault doesnt assess incorrect unrealized losses
@@ -71,10 +68,9 @@ contract Strategy is BaseStrategy, Ownable {
         }
     }
 
-    function _freeFunds(uint256 _amount)
-        internal
-        returns (uint256 _amountFreed)
-    {
+    function _freeFunds(
+        uint256 _amount
+    ) internal returns (uint256 _amountFreed) {
         uint256 idleAmount = balanceOfAsset();
         if (_amount <= idleAmount) {
             // we have enough idle assets for the vault to take
@@ -166,11 +162,9 @@ contract Strategy is BaseStrategy, Ownable {
      * @param newAmount Any amount that will be added to the total supply in a deposit
      * @return The reward APR calculated by converting tokens value to USD with a decimal scaled up by 1e18
      */
-    function getRewardAprForSupplyBase(int256 newAmount)
-        public
-        view
-        returns (uint256)
-    {
+    function getRewardAprForSupplyBase(
+        int256 newAmount
+    ) public view returns (uint256) {
         // COMP issued per block to suppliers * (1 * 10 ^ 18)
         uint256 compSpeedPerBlock = COMPTROLLER.compSupplySpeeds(
             address(cToken)
@@ -191,7 +185,7 @@ contract Strategy is BaseStrategy, Ownable {
         // upscale to price COMP percision 10 ^ 6
         uint256 wantPriceInUsd = PRICE_FEED.getUnderlyingPrice(
             address(cToken)
-        ) / 10**(30 - assetDecimals);
+        ) / 10 ** (30 - assetDecimals);
 
         uint256 cTokenTotalSupplyInWant = (cToken.totalSupply() *
             cToken.exchangeRateStored()) / 1e18;
@@ -200,7 +194,7 @@ contract Strategy is BaseStrategy, Ownable {
         );
 
         return
-            (compSpeedPerYear * rewardTokenPriceInUsd * 10**assetDecimals) /
+            (compSpeedPerYear * rewardTokenPriceInUsd * 10 ** assetDecimals) /
             (wantTotalSupply * wantPriceInUsd);
     }
 
@@ -304,10 +298,10 @@ contract Strategy is BaseStrategy, Ownable {
 
     //These will default to 0.
     //Will need to be manually set if want is incentized before any harvests
-    function setUniFees(uint24 _compToEth, uint24 _ethToAsset)
-        external
-        onlyOwner
-    {
+    function setUniFees(
+        uint24 _compToEth,
+        uint24 _ethToAsset
+    ) external onlyOwner {
         compToEthFee = _compToEth;
         ethToAssetFee = _ethToAsset;
     }
@@ -317,10 +311,10 @@ contract Strategy is BaseStrategy, Ownable {
      * @param _minCompToSell Minimum value that will be sold
      * @param _minCompToClaim Minimum vaule to claim from compound
      */
-    function setRewardStuff(uint256 _minCompToSell, uint256 _minCompToClaim)
-        external
-        onlyOwner
-    {
+    function setRewardStuff(
+        uint256 _minCompToSell,
+        uint256 _minCompToClaim
+    ) external onlyOwner {
         minCompToSell = _minCompToSell;
         minCompToClaim = _minCompToClaim;
     }
