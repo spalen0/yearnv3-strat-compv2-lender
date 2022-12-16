@@ -111,10 +111,11 @@ def test_balance_of(create_vault_and_strategy, gov, amount, provide_strategy_wit
 
 def test_deposit_no_vault__reverts(create_vault_and_strategy, gov, amount, user):
     vault, strategy = create_vault_and_strategy(gov, amount)
-    with reverts("not owner"):
+    with reverts("not vault"):
         strategy.deposit(100, user, sender=user)
 
-    with reverts("not owner"):
+    # will revert due to no approval
+    with reverts():
         strategy.deposit(100, user, sender=vault)
 
 
@@ -169,13 +170,7 @@ def test_max_withdraw_no_liquidity(
         user, asset.balanceOf(ctoken) - 10 ** vault.decimals(), sender=ctoken
     )
 
-    assert strategy.maxWithdraw(vault) == 10 ** vault.decimals()
-
-
-def test_withdraw_no_owner__reverts(create_vault_and_strategy, gov, amount, user):
-    vault, strategy = create_vault_and_strategy(gov, amount)
-    with reverts("not owner"):
-        strategy.withdraw(100, user, user, sender=vault)
+    assert strategy.maxWithdraw(vault) == strategy.totalAssets()
 
 
 def test_withdraw_above_max__reverts(create_vault_and_strategy, gov, amount, user):
@@ -245,7 +240,7 @@ def test_withdraw_low_liquidity(
     assert new_debt - 10 ** vault.decimals() > strategy.balanceOfCToken()
 
     max_withdraw = strategy.maxWithdraw(vault)
-    assert max_withdraw == 10 ** vault.decimals()
+    assert max_withdraw == strategy.totalAssets()
     tx = strategy.withdraw(max_withdraw, vault, vault, sender=vault)
 
     # all is in cToken because underlying asset is drained
@@ -301,7 +296,7 @@ def test_apr(
     assert current_real_apr + rewards_apr > strategy.aprAfterDebtChange(int(1e12))
 
 
-def test_harvest(
+def test_tend(
     asset,
     ctoken,
     user,
@@ -317,8 +312,8 @@ def test_harvest(
 
     before_bal = strategy.totalAssets()
 
-    # harvest function should still work and not revert without any rewards
-    strategy.harvest(sender=strategist)
+    # tend function should still work and not revert without any rewards
+    vault.tend_strategy(strategy.address, sender=gov)
 
     stored_balance = strategy.balanceOfCToken()
     # this will trigger to recalculating the exchange rate used for cToken

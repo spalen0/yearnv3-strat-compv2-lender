@@ -38,8 +38,8 @@ def test_reward_yswap(
     strategy.setTradeFactory(trade_factory.address, sender=strategist)
     assert strategy.tradeFactory() == trade_factory.address
 
-    # harvest function will not sell COMP because yswap is set
-    strategy.harvest(sender=strategist)
+    # tend function will not sell COMP because yswap is set
+    vault.tend_strategy(strategy.address, sender=gov)
     assert comp.balanceOf(strategy) == reward
 
     token_in = comp

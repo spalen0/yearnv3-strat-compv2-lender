@@ -28,8 +28,8 @@ def test_rewards_selling(
     # Set uni fees
     strategy.setUniFees(3000, 500, sender=strategist)
 
-    # harvest function should still work and will swap rewards any rewards
-    strategy.harvest(sender=strategist)
+    # tend function should still work and will swap rewards any rewards
+    vault.tend_strategy(strategy.address, sender=gov)
 
     # rewards should be sold
     assert strategy.totalAssets() > before_bal
@@ -67,7 +67,7 @@ def test_rewards_pending(
     # Don't sell rewards nor claim
     strategy.setRewardStuff(MAX_INT, MAX_INT, sender=strategist)
 
-    strategy.harvest(sender=strategist)
+    vault.tend_strategy(strategy.address, sender=gov)
 
     # Take some time for rewards to accrue
     chain.mine(3600 * 24 * 10)
@@ -84,8 +84,8 @@ def test_rewards_pending(
     # Don't sell rewards but claim all
     strategy.setRewardStuff(MAX_INT, 1, sender=strategist)
 
-    # harvest function should still work and will swap rewards any rewards
-    strategy.harvest(sender=strategist)
+    # tend function should still work and will swap rewards any rewards
+    vault.tend_strategy(strategy.address, sender=gov)
 
     assert comp.balanceOf(strategy) >= rewards_pending
     assert comp.balanceOf(strategy) < rewards_pending * 1.1
