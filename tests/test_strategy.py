@@ -1,6 +1,6 @@
 from ape import reverts
 import pytest
-from utils.constants import REL_ERROR, MAX_INT, BLOCKS_PER_YEAR
+from utils.constants import REL_ERROR, MAX_INT, BLOCKS_PER_YEAR, ROLES
 
 
 def test_strategy_constructor(asset, vault, strategy):
@@ -311,6 +311,9 @@ def test_tend(
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
     before_bal = strategy.totalAssets()
+
+    # set gov to keeper role
+    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
 
     # tend function should still work and not revert without any rewards
     vault.tend_strategy(strategy.address, sender=gov)

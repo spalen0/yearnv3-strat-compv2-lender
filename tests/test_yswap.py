@@ -1,6 +1,6 @@
 from ape import reverts
 import pytest
-from utils.constants import ZERO_ADDRESS
+from utils.constants import ZERO_ADDRESS, ROLES
 
 
 def test_reward_yswap(
@@ -27,7 +27,7 @@ def test_reward_yswap(
 
     before_bal = strategy.totalAssets()
 
-    reward = 2 * 10 ** comp.decimals()
+    reward = 11 * 10 ** comp.decimals()
     comp.transfer(strategy, reward, sender=comp_whale)
     assert comp.balanceOf(strategy) == reward
 
@@ -37,6 +37,9 @@ def test_reward_yswap(
     assert strategy.tradeFactory() == ZERO_ADDRESS
     strategy.setTradeFactory(trade_factory.address, sender=strategist)
     assert strategy.tradeFactory() == trade_factory.address
+
+    # set gov to keeper role
+    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
 
     # tend function will not sell COMP because yswap is set
     vault.tend_strategy(strategy.address, sender=gov)

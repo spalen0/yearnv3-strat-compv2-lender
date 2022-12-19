@@ -36,7 +36,7 @@ contract Strategy is BaseStrategy, Ownable {
         UniswapAnchoredViewI(0x65c816077C29b557BEE980ae3cC2dCE80204A0C5);
 
     uint256 public minCompToSell = 1 ether;
-    uint256 public minCompToClaim = 5 ether;
+    uint256 public minCompToClaim = 10 ether;
     uint256 public dustThreshold = 1;
     address public tradeFactory;
 
@@ -286,14 +286,19 @@ contract Strategy is BaseStrategy, Ownable {
     function _migrate(address _newStrategy) internal override {
         uint256 balanceUnderlying = cToken.balanceOfUnderlying(address(this));
 
-        // make sure we can withdraw all or we won't migrate
-        require(
-            cToken.redeemUnderlying(balanceUnderlying) == 0,
-            "cToken: redeemUnderlying fail"
-        );
+        // first try and withdraw the full balance
+        cToken.redeemUnderlying(balanceUnderlying);
 
+        // send whatever tokens we have to new strategy
         uint256 looseAsset = balanceOfAsset();
-        IERC20(asset).transfer(_newStrategy, looseAsset);
+        if(looseAsset > 0) {    
+            IERC20(asset).transfer(_newStrategy, looseAsset);
+        }
+
+        uint256 cTokenBalance = balanceOfCToken();
+        if(cTokenBalance > 0) {
+            cToken.transfer(_newStrategy, cTokenBalance);
+        }
     }
 
     //These will default to 0.

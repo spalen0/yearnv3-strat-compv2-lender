@@ -1,6 +1,6 @@
 from ape import chain
 import pytest
-from utils.constants import MAX_INT
+from utils.constants import MAX_INT, ROLES
 
 
 def test_rewards_selling(
@@ -21,12 +21,15 @@ def test_rewards_selling(
 
     before_bal = strategy.totalAssets()
 
-    reward = 2 * 10 ** comp.decimals()
+    reward = 11 * 10 ** comp.decimals()
     comp.transfer(strategy, reward, sender=comp_whale)
     assert comp.balanceOf(strategy) == reward
 
     # Set uni fees
     strategy.setUniFees(3000, 500, sender=strategist)
+
+    # set gov to keeper role
+    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
 
     # tend function should still work and will swap rewards any rewards
     vault.tend_strategy(strategy.address, sender=gov)
@@ -66,6 +69,9 @@ def test_rewards_pending(
 
     # Don't sell rewards nor claim
     strategy.setRewardStuff(MAX_INT, MAX_INT, sender=strategist)
+
+    # set gov to keeper role
+    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
 
     vault.tend_strategy(strategy.address, sender=gov)
 
