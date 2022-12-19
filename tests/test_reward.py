@@ -28,11 +28,8 @@ def test_rewards_selling(
     # Set uni fees
     strategy.setUniFees(3000, 500, sender=strategist)
 
-    # set gov to keeper role
-    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
-
     # tend function should still work and will swap rewards any rewards
-    vault.tend_strategy(strategy.address, sender=gov)
+    strategy.tend(sender=vault)
 
     # rewards should be sold
     assert strategy.totalAssets() > before_bal
@@ -67,22 +64,13 @@ def test_rewards_pending(
     new_debt = amount
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
-    # Don't sell rewards nor claim
-    strategy.setRewardStuff(MAX_INT, MAX_INT, sender=strategist)
-
-    # set gov to keeper role
-    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
-
-    vault.tend_strategy(strategy.address, sender=gov)
-
     # Take some time for rewards to accrue
     chain.mine(3600 * 24 * 10)
 
-    # Somebody deposits to trigger to rewards calculation
-    asset.approve(vault.address, amount, sender=asset_whale)
+    # Somebody deposits to trigger rewards calculation
     ctoken.mint(amount, sender=asset_whale)
 
-    # rewards should be sold
+    # rewards should be pending buy not claimed
     rewards_pending = strategy.getRewardsPending()
     assert rewards_pending > 0
     assert comp.balanceOf(strategy) == 0
@@ -90,8 +78,8 @@ def test_rewards_pending(
     # Don't sell rewards but claim all
     strategy.setRewardStuff(MAX_INT, 1, sender=strategist)
 
-    # tend function should still work and will swap rewards any rewards
-    vault.tend_strategy(strategy.address, sender=gov)
+    # tend function should still work and will not swap any rewards
+    strategy.tend(sender=vault)
 
     assert comp.balanceOf(strategy) >= rewards_pending
     assert comp.balanceOf(strategy) < rewards_pending * 1.1

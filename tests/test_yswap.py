@@ -38,16 +38,13 @@ def test_reward_yswap(
     strategy.setTradeFactory(trade_factory.address, sender=strategist)
     assert strategy.tradeFactory() == trade_factory.address
 
-    # set gov to keeper role
-    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
-
     # tend function will not sell COMP because yswap is set
-    vault.tend_strategy(strategy.address, sender=gov)
-    assert comp.balanceOf(strategy) == reward
+    strategy.tend(sender=vault)
+    assert comp.balanceOf(strategy) >= reward
 
     token_in = comp
     token_out = asset
-    amount_in = reward
+    amount_in = comp.balanceOf(strategy)
     asyncTradeExecutionDetails = [
         strategy.address,
         token_in.address,

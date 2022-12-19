@@ -291,12 +291,12 @@ contract Strategy is BaseStrategy, Ownable {
 
         // send whatever tokens we have to new strategy
         uint256 looseAsset = balanceOfAsset();
-        if(looseAsset > 0) {    
+        if (looseAsset > 0) {
             IERC20(asset).transfer(_newStrategy, looseAsset);
         }
 
         uint256 cTokenBalance = balanceOfCToken();
-        if(cTokenBalance > 0) {
+        if (cTokenBalance > 0) {
             cToken.transfer(_newStrategy, cTokenBalance);
         }
     }

@@ -312,11 +312,8 @@ def test_tend(
 
     before_bal = strategy.totalAssets()
 
-    # set gov to keeper role
-    vault.set_role(gov.address, ROLES.KEEPER, sender=gov)
-
     # tend function should still work and not revert without any rewards
-    vault.tend_strategy(strategy.address, sender=gov)
+    strategy.tend(sender=vault)
 
     stored_balance = strategy.balanceOfCToken()
     # this will trigger to recalculating the exchange rate used for cToken
