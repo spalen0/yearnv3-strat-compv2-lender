@@ -22,13 +22,13 @@ contract Strategy is BaseStrategy, Ownable {
         ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
     //Fees for the V3 pools if the supply is incentivized
     uint24 public compToEthFee;
-    uint24 public ethToWantFee;
+    uint24 public ethToAssetFee;
 
     // eth blocks are mined every 12s -> 3600 * 24 * 365 / 12 = 2_628_000
     uint256 private constant BLOCKS_PER_YEAR = 2_628_000;
-    address public constant COMP =
+    address internal constant COMP =
         address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
-    address public constant WETH =
+    address internal constant WETH =
         address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     ComptrollerI public constant COMPTROLLER =
         ComptrollerI(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
@@ -36,7 +36,7 @@ contract Strategy is BaseStrategy, Ownable {
         UniswapAnchoredViewI(0x65c816077C29b557BEE980ae3cC2dCE80204A0C5);
 
     uint256 public minCompToSell = 1 ether;
-    uint256 public minCompToClaim = 1 ether;
+    uint256 public minCompToClaim = 10 ether;
     uint256 public dustThreshold = 1;
     address public tradeFactory;
 
@@ -60,8 +60,12 @@ contract Strategy is BaseStrategy, Ownable {
         address owner
     ) internal view override returns (uint256) {
         // TODO: may not be accurate due to unaccrued balance in cToken
-        return
-            Math.min(IERC20(asset).balanceOf(address(cToken)), _totalAssets());
+        if (owner == vault) {
+            // return total value we have even if illiquid so the vault doesnt assess incorrect unrealized losses
+            return _totalAssets();
+        } else {
+            return 0;
+        }
     }
 
     function _freeFunds(
@@ -88,11 +92,7 @@ contract Strategy is BaseStrategy, Ownable {
         }
     }
 
-    function _withdraw(
-        uint256 amount,
-        address receiver,
-        address owner
-    ) internal override returns (uint256) {
+    function _withdraw(uint256 amount) internal override returns (uint256) {
         return _freeFunds(amount);
     }
 
@@ -109,6 +109,10 @@ contract Strategy is BaseStrategy, Ownable {
 
     function _withdrawFromCompound(uint256 _amount) internal {
         if (_amount > dustThreshold) {
+            _amount = Math.min(
+                _amount,
+                IERC20(asset).balanceOf(address(cToken))
+            );
             require(
                 cToken.redeemUnderlying(_amount) == 0,
                 "cToken: redeemUnderlying fail"
@@ -216,12 +220,19 @@ contract Strategy is BaseStrategy, Ownable {
         return (cToken.balanceOf(address(this)) * deltaIndex) / 1e36;
     }
 
-    function harvest() external onlyOwner {
-        if (getRewardsPending() > minCompToClaim) {
-            _claimRewards();
-        }
+    function _tendTrigger() internal view override returns (bool) {
+        if (!isBaseFeeAcceptable()) return false;
+        if (
+            getRewardsPending() + IERC20(COMP).balanceOf(address(this)) >
+            minCompToClaim
+        ) return true;
+    }
 
-        if (tradeFactory == address(0) && compToEthFee != 0) {
+    // can be called by either owner or the vault
+    function _tend() internal override {
+        _claimRewards();
+
+        if (tradeFactory == address(0) && ethToAssetFee != 0) {
             _disposeOfComp();
         }
 
@@ -254,8 +265,8 @@ contract Strategy is BaseStrategy, Ownable {
                 COMP, // comp-ETH
                 compToEthFee,
                 WETH, // ETH-want
-                ethToWantFee,
-                IVault(vault).asset()
+                ethToAssetFee,
+                asset
             );
 
             // Proceeds from Comp are not subject to minExpectedSwapPercentage
@@ -272,14 +283,32 @@ contract Strategy is BaseStrategy, Ownable {
         }
     }
 
+    function _migrate(address _newStrategy) internal override {
+        uint256 balanceUnderlying = cToken.balanceOfUnderlying(address(this));
+
+        // first try and withdraw the full balance
+        cToken.redeemUnderlying(balanceUnderlying);
+
+        // send whatever tokens we have to new strategy
+        uint256 looseAsset = balanceOfAsset();
+        if (looseAsset > 0) {
+            IERC20(asset).transfer(_newStrategy, looseAsset);
+        }
+
+        uint256 cTokenBalance = balanceOfCToken();
+        if (cTokenBalance > 0) {
+            cToken.transfer(_newStrategy, cTokenBalance);
+        }
+    }
+
     //These will default to 0.
     //Will need to be manually set if want is incentized before any harvests
     function setUniFees(
         uint24 _compToEth,
-        uint24 _ethToWant
+        uint24 _ethToAsset
     ) external onlyOwner {
         compToEthFee = _compToEth;
-        ethToWantFee = _ethToWant;
+        ethToAssetFee = _ethToAsset;
     }
 
     /**

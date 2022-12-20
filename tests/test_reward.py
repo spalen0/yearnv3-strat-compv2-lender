@@ -1,6 +1,6 @@
 from ape import chain
 import pytest
-from utils.constants import MAX_INT
+from utils.constants import MAX_INT, ROLES
 
 
 def test_rewards_selling(
@@ -21,15 +21,15 @@ def test_rewards_selling(
 
     before_bal = strategy.totalAssets()
 
-    reward = 2 * 10 ** comp.decimals()
+    reward = 11 * 10 ** comp.decimals()
     comp.transfer(strategy, reward, sender=comp_whale)
     assert comp.balanceOf(strategy) == reward
 
     # Set uni fees
     strategy.setUniFees(3000, 500, sender=strategist)
 
-    # harvest function should still work and will swap rewards any rewards
-    strategy.harvest(sender=strategist)
+    # tend function should still work and will swap rewards any rewards
+    strategy.tend(sender=vault)
 
     # rewards should be sold
     assert strategy.totalAssets() > before_bal
@@ -64,19 +64,13 @@ def test_rewards_pending(
     new_debt = amount
     provide_strategy_with_debt(gov, strategy, vault, new_debt)
 
-    # Don't sell rewards nor claim
-    strategy.setRewardStuff(MAX_INT, MAX_INT, sender=strategist)
-
-    strategy.harvest(sender=strategist)
-
     # Take some time for rewards to accrue
     chain.mine(3600 * 24 * 10)
 
-    # Somebody deposits to trigger to rewards calculation
-    asset.approve(vault.address, amount, sender=asset_whale)
+    # Somebody deposits to trigger rewards calculation
     ctoken.mint(amount, sender=asset_whale)
 
-    # rewards should be sold
+    # rewards should be pending buy not claimed
     rewards_pending = strategy.getRewardsPending()
     assert rewards_pending > 0
     assert comp.balanceOf(strategy) == 0
@@ -84,8 +78,8 @@ def test_rewards_pending(
     # Don't sell rewards but claim all
     strategy.setRewardStuff(MAX_INT, 1, sender=strategist)
 
-    # harvest function should still work and will swap rewards any rewards
-    strategy.harvest(sender=strategist)
+    # tend function should still work and will not swap any rewards
+    strategy.tend(sender=vault)
 
     assert comp.balanceOf(strategy) >= rewards_pending
     assert comp.balanceOf(strategy) < rewards_pending * 1.1

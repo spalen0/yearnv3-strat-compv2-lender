@@ -1,6 +1,6 @@
 from ape import reverts
 import pytest
-from utils.constants import ZERO_ADDRESS
+from utils.constants import ZERO_ADDRESS, ROLES
 
 
 def test_reward_yswap(
@@ -27,7 +27,7 @@ def test_reward_yswap(
 
     before_bal = strategy.totalAssets()
 
-    reward = 2 * 10 ** comp.decimals()
+    reward = 11 * 10 ** comp.decimals()
     comp.transfer(strategy, reward, sender=comp_whale)
     assert comp.balanceOf(strategy) == reward
 
@@ -38,13 +38,13 @@ def test_reward_yswap(
     strategy.setTradeFactory(trade_factory.address, sender=strategist)
     assert strategy.tradeFactory() == trade_factory.address
 
-    # harvest function will not sell COMP because yswap is set
-    strategy.harvest(sender=strategist)
-    assert comp.balanceOf(strategy) == reward
+    # tend function will not sell COMP because yswap is set
+    strategy.tend(sender=vault)
+    assert comp.balanceOf(strategy) >= reward
 
     token_in = comp
     token_out = asset
-    amount_in = reward
+    amount_in = comp.balanceOf(strategy)
     asyncTradeExecutionDetails = [
         strategy.address,
         token_in.address,
