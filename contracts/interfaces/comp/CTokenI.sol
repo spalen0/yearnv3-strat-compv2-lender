@@ -136,7 +136,15 @@ interface CTokenI {
 
     function getAccountSnapshot(
         address account
-    ) external view returns (uint256, uint256, uint256, uint256);
+    )
+        external
+        view
+        returns (
+            uint256 error,
+            uint256 tokenBalance,
+            uint256 borrowBalance,
+            uint256 exchangeRate
+        );
 
     function borrowRatePerBlock() external view returns (uint256);
 

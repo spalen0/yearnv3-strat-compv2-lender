@@ -26,10 +26,8 @@ contract Strategy is BaseStrategy, Ownable {
 
     // eth blocks are mined every 12s -> 3600 * 24 * 365 / 12 = 2_628_000
     uint256 private constant BLOCKS_PER_YEAR = 2_628_000;
-    address internal constant COMP =
-        address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
-    address internal constant WETH =
-        address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address internal constant COMP = 0xc00e94Cb662C3520282E6f5717214004A7f26888;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     ComptrollerI public constant COMPTROLLER =
         ComptrollerI(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
     UniswapAnchoredViewI public constant PRICE_FEED =
@@ -125,12 +123,14 @@ contract Strategy is BaseStrategy, Ownable {
     }
 
     function balanceOfCToken() public view returns (uint256) {
-        uint256 balance = cToken.balanceOf(address(this));
+        (, uint256 balance, , uint256 exchangeRate) = cToken.getAccountSnapshot(
+            address(this)
+        );
         if (balance == 0) {
             return 0;
         } else {
             //The current exchange rate as an unsigned integer, scaled by 1e18.
-            return (balance * cToken.exchangeRateStored()) / 1e18;
+            return (balance * exchangeRate) / 1e18;
         }
     }
 
@@ -355,7 +355,7 @@ contract Strategy is BaseStrategy, Ownable {
 
     function _removeTradeFactoryPermissions() internal {
         IERC20(COMP).safeApprove(tradeFactory, 0);
-
+        ITradeFactory(tradeFactory).disable(COMP, IVault(vault).asset());
         tradeFactory = address(0);
     }
 }
